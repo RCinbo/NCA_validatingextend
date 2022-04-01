@@ -1,0 +1,17 @@
+book_filename: "inbo_rapport"
+output_dir: "../../docs/inbo_rapport"
+delete_merged_file: TRUE
+edit: https://github.com/inbo/inbomd_examples/edit/master/source/inbo_rapport/%s
+language:
+  label:
+    fig: 'Figuur '
+    tab: 'Tabel '
+    eq: 'Vergelijking '
+    thm: 'Theorema '
+    lem: 'Lemma '
+    def: 'Definitie '
+    cor: 'Gevolgtrekking '
+    prp: 'Bewering '
+    ex: 'Voorbeeld '
+    proof: 'Bewijs. '
+    remark: 'Opmerking. '
