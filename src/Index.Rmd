@@ -96,13 +96,15 @@ Ajoutez éventuellement une traduction du résumé ici.
 
 \mainmatter
 
-# Inleiding
+# Introduction
 
 Dit document vergelijkt verschillende ecosystem extent/landgebruik kaarten voor Vlaanderen met het oog op betrouwbare en bruikbare kaarten als basis voor ecosystem extend accounts voor Vlaanderen.
 
 ```{r setup, include = FALSE}
+library(here)
 library(knitr)
 library(kableExtra)
+source(sprintf("%s/src/NCA_functions.R",here()))
 opts_chunk$set(
   echo = FALSE,
   eval = TRUE,
@@ -135,40 +137,76 @@ if (interactive()) {
     }
   )
 }
-
-library(caret) # Confusion matrix maken
 library(git2rdata)
 library(plotly)
 library(here)
 library(sf)
-punten <- read_vc("validatiepunten", root = sprintf("%s/data/",here())) # Gevalideerde punten
-combine <- read_vc("combine", root = sprintf("%s/data/",here())) # Combine van de validatieklassenkaart van 2013
-# en 2016 -> geeft de oppervlakte van de landgebruiksveranderingen en
-# van de stabiele klassen
+load(sprintf("%s/data/validation.Rdata", here()))
+# lg2016 <- terra::rast(sprintf("%s/data/lu_landgebruik_vlaa_2016_v2.tif",here()))
+# test <- terra::extract(x = lg2016, 
+#                        y = terra::vect(
+#                          st_as_sf(x = points_id[, c('POINT_X','POINT_Y')], 
+#                                   coords = c("POINT_X", "POINT_Y"),
+#                                   crs = "EPSG:31370"))
+# ) %>% #extract de waardes van de referentiedata
+#   mutate(x = punten[, 'POINT_X'],
+#          y = punten[, 'POINT_X']) %>%
+#   rename(landgebruik = lu_landgebruik_vlaa_2016_v2) %>%
+#   mutate(landgebruik = as.character(landgebruik)) 
+# test$landgebruikrecode <- recode(test$landgebruik, 
+#                                  "1" = "Urbaan",
+#                                  "2" = "Urbaan",
+#                                  "3" = "Urbaan",
+#                                  "4" = "Urbaan",
+#                                  "5" = "Urbaan",
+#                                  "6" = "Urbaan",
+#                                  "7" = "Urbaan",
+#                                  "8" = "Urbaan",
+#                                  "9" = "Overig",
+#                                  "10" = "Laag groen",
+#                                  "11" = "Urbaan",
+#                                  "12" = "Bos",
+#                                  "13" = "Akker",
+#                                  "14" = "Grasland",
+#                                  "15" = "Hoog groen",
+#                                  "16" = "Open natuur",
+#                                  "17" = "Water",
+#                                  "18" = "Laag groen")
+# test <- test %>% 
+#   replace_na(list(landgebruikrecode = "Overig")) %>%
+#   mutate(code = 
+#            factor(landgebruikrecode,
+#                   levels = c("Open natuur", "Bos", "Grasland","Akker", "Urbaan", 
+#                              "Laag groen", "Hoog groen", "Water", "Overig")),
+#          landgebruikcode = as.factor(as.numeric(landgebruikrecode))
+#          )
+nara2016 <- terra::rast(sprintf("%s/data/2016/LG2016_finaal_ori.tif",here()))
+nara2013 <- terra::rast(sprintf("%s/data/2013/LG2013_finaal_ori.tif",here()))
+nara16 <- cleanmapdata(nara2016, points_id, tbltrans)
+nara13 <- cleanmapdata(nara2013, points_id, tbltrans)
+
+bosw2016 <- terra::rast(sprintf("%s/data/2016/LG2016_boswijzer_update.tif",here()))
+bosw2013 <- terra::rast(sprintf("%s/data/2013/LG2013_boswijzer_update.tif",here()))
+bosw16 <- cleanmapdata(bosw2016, points_id, tbltrans)
+bosw13 <- cleanmapdata(bosw2013, points_id, tbltrans)
+
+bak2016 <- terra::rast(sprintf("%s/data/2016/LG2016_BAK_update.tif",here()))
+bak2013 <- terra::rast(sprintf("%s/data/2013/LG2013_BAK_update.tif",here()))
+bak16 <- cleanmapdata(bak2016, points_id, tbltrans)
+bak13 <- cleanmapdata(bak2013, points_id, tbltrans)
+
+gras2016 <- terra::rast(sprintf("%s/data/2016/LG2016_grasland_update.tif",here()))
+gras2013 <- terra::rast(sprintf("%s/data/2013/LG2013_grasland_update.tif",here()))
+gras16 <- cleanmapdata(gras2016, points_id, tbltrans)
+gras13 <- cleanmapdata(gras2013, points_id, tbltrans)
+
+all2016 <- terra::rast(sprintf("%s/data/2016/LG2016_finaal_update.tif",here()))
+all2013 <- terra::rast(sprintf("%s/data/2013/LG2013_finaal_update.tif",here()))
+all16 <- cleanmapdata(all2016, points_id, tbltrans)
+all13 <- cleanmapdata(all2013, points_id, tbltrans)
 
 
-# Omzettingstabel landgebruiken
-lu <- c(
-  "Open natuur", "Bos", "Grasland", "Akker", "Urbaan", "Laag groen",
-  "Hoog groen", "Water", "Overig"
-)
-lucode <- c(1, 2, 3, 4, 5, 6, 7, 8, 9)
-valid <- c(
-  "Open natuur", "Hoog groen", "Open natuur", "Akker", "Urbaan",
-  "Open natuur", "Hoog groen", "Water", "Overig"
-)
-validcode <- c(1, 2, 1, 4, 5, 1, 2, 8, 9)
-tbltrans <- data.frame(lu, lucode, valid, validcode) %>%
-  mutate(valid = as.character(valid))
-f <- system.file(sprintf("%s/data/lu_landgebruik_vlaa_2016_v2.tif",here()), 
-                 package = "terra")
-lg2016 <- terra::rast(sprintf("%s/data/lu_landgebruik_vlaa_2016_v2.tif",here()))
-test <- terra::extract(x = lg2016, 
-                       y = terra::vect(
-                         st_as_sf(x = punten[, c('POINT_X','POINT_Y')], 
-                                  coords = c("POINT_X", "POINT_Y"),
-                                  crs = "EPSG:31370"))
-)#extract de waardes van de referentiedata
+
 
 ```
 
@@ -227,393 +265,70 @@ vb %>% kable(booktabs = TRUE,
   pack_rows("Classified data", 1, 3) 
 ```
 
+## Results for the original map
+```{r results='asis'}
+title <- "the original land use maps"
+mapdata1 <- nara13$valid_eng
+refdata1 <- as.factor(points_id$lu13oord_eng)
+mapdata2 <- nara16$valid_eng
+refdata2 <- as.factor(points_id$lu16oord_eng)
+options(knitr.duplicate.label = "allow")
+```
+```{r callchild1, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childnara-'}
 
-```{r data_bewerken, results='hide', cache = TRUE}
-# OPMAAK DATASET -----------------------------------------------------
-# De dataset met validatiepunten bevat informatie over de verandering van een
-# cel (0/1) en de aard van de verandering (klasse A -> klasse B). Voor de
-# validatie werden achteraf een aantal moeilijk te onderscheiden klassen
-# samengenomen. De analyse kan dus op 3 niveaus uitgevoerd worden:
-#   (1) verandering - geen verandering, (2) originele landgebruiksklassen en
-# (3) de geaggregeerde klassen. In het onderstaande script worden deze
-# drie validatiesets apart aangemaakt.
+```
+## Results for the updated map with boswijzer
+```{r results='asis'}
+title <- "the original land use maps, updated with the boswijzer"
+mapdata1 <- bosw13$valid_eng
+refdata1 <- as.factor(points_id$lu13oord_eng)
+mapdata2 <- bosw16$valid_eng
+refdata2 <- as.factor(points_id$lu16oord_eng)
+options(knitr.duplicate.label = "allow")
+```
+```{r callchild2, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childbos-'}
 
-# 1. Puntenset -----
-points <- punten %>%
-  na_if("<Null>") %>%
-  # Alle <Null> omzetten in NA
-  gather(key = klasse, value = oordeel, X2013:change.9) %>%
-  # Van breed formaat naar lang formaat
-  separate(col = klasse, into = c("klasse", "eval"), sep = "\\.") %>%
-  replace_na(list(eval = 0)) %>%
-  # Voeg evaluator toe
-  drop_na() %>%
-  # Alle NA laten vallen
-  rename(
-    x = POINT_X, y = POINT_Y, lu2013 = change2013, lu2016 = change2016,
-    verandering = type
-  ) %>%
-  mutate(oordeel = recode(oordeel, "Nee" = "nochange", "Ja" = "change")) %>%
-  mutate(klasse = gsub("\\..*", "", klasse)) %>%
-  # Alles na "." weglaten -> \\.. definieert . en * betekent "alles na"
-  mutate(klasse = recode(klasse,
-    X2013 = "lu2013", X2016 = "lu2016",
-    change = "verandering"
-  )) %>%
-  mutate(lu2013 = recode(lu2013,
-    "1" = "Open natuur", "2" = "Bos", "3" = "Grasland", "4" = "Akker",
-    "5" = "Urbaan",
-    "6" = "Laag groen", "7" = "Hoog groen", "8" = "Water", "9" = "Overig"
-  )) %>%
-  # codes naar tekst
-  mutate(lu2016 = recode(lu2016,
-    "1" = "Open natuur", "2" = "Bos", "3" = "Grasland", "4" = "Akker",
-    "5" = "Urbaan",
-    "6" = "Laag groen", "7" = "Hoog groen", "8" = "Water", "9" = "Overig"
-  )) %>%
-  # codes naar tekst
-  rowwise() %>%
-  mutate(lu_c = ifelse(klasse == "lu2013" & lu2013 == oordeel,
-    1, ifelse(klasse == "lu2016" & lu2016 == oordeel,
-      1, 0
-    )
-  )) %>%
-  # Check of de gevalideerde landgebruiken overeenkomen met de LG van de kaart
-  mutate(change_c = ifelse(verandering == oordeel,
-    1, 0
-  )) %>%
-  # Check of de beoordeling "change/nochange" overeenkomt met die van de
-  # LG-kaart
-  ungroup() %>%
-  group_by(objectid) %>%
-  mutate(n = n() / 3) %>%
-  ungroup() %>%
-  filter(n >= 1) %>%
-  # alleen punten die gevalideerd zijn
-  arrange(objectid) %>%
-  left_join(dplyr::select(tbltrans, valid, lu), by = c("lu2013" = "lu")) %>%
-  rename(luval13 = valid) %>%
-  # validatieklassen toevoegen (= aggregatie van oorspronkelijke lu-klassen)
-  left_join(dplyr::select(tbltrans, valid, lu), by = c("lu2016" = "lu")) %>%
-  rename(luval16 = valid) %>%
-  left_join(dplyr::select(tbltrans, valid, lu), by = c("oordeel" = "lu")) %>%
-  rename(oordeelval = valid) %>%
-  group_by(objectid, eval) %>%
-  mutate(oordeelval = ifelse(is.na(oordeelval),
-    ifelse(identical(oordeelval[1], oordeelval[2]),
-      "nochange", "change"
-    ), oordeelval
-  )) %>%
-  # Aanpassen beoordeling "verandering" -> als de validatieklasse 2 x hetzelfde
-  # is per evaluator, dan "nochange"
-  rowwise() %>%
-  mutate(veranderingval = ifelse(luval13 == luval16, "nochange", "change")) %>%
-  mutate(luval_c = ifelse(klasse == "lu2013" & luval13 == oordeelval, 1,
-    ifelse(klasse == "lu2016" & luval16 == oordeelval, 1, 0)
-  )) %>%
-  # Check of de gevalideerde landgebruiken overeenkomen met de LG van de kaart
-  mutate(changeval_c = ifelse(veranderingval == oordeelval, 1, 0)) %>%
-  # Check of de beoordeling "change/nochange" overeenkomt met die van
-  # de LG-kaart
-  ungroup()
-
-saveRDS(points, file = sprintf("%s/data/points.rds", here()))
-
-points_id <- points %>%
-  # puntenset met 1 waarde per objectid
-  # filter(klasse != "verandering") %>%
-  spread(klasse, oordeelval) %>%
-  group_by(objectid, eval) %>%
-  summarise(
-    luval13 = first(luval13), luval16 = first(luval16),
-    verand = first(veranderingval),
-    lu13oord = first(na.omit(lu2013)), lu16oord = first(na.omit(lu2016)),
-    verandoord = first(na.omit(verandering))
-  ) %>%
-  group_by(objectid) %>%
-  sample_n(1) %>%
-  na.omit() %>%
-  mutate(codeval13 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", luval13,
-    perl = TRUE
-  )) %>%
-  mutate(codeval16 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", luval16,
-    perl = TRUE
-  )) %>%
-  unite(changeclass, codeval13, codeval16, sep = "_") %>%
-  mutate(codeval13 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu13oord,
-    perl = TRUE
-  )) %>%
-  mutate(codeval16 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu16oord,
-    perl = TRUE
-  )) %>%
-  unite(changeclassref, codeval13, codeval16, sep = "_")
-
-# 1.1. Punten validatieklasse -----
-
-points_val <- as.data.frame(points_id) %>%
-  mutate(
-    changeclass = as.factor(changeclass),
-    changeclassref = as.factor(changeclassref)
-  ) %>%
-  dplyr::select(objectid, changeclass, changeclassref)
-
-# Alleen de verandering ON_W werd gevalideerd. In 38 van de 40 gevalideerde
-# punten verandert er niets (water blijft water), de andere 2 punten blijken
-# ook onveranderlijk (O_O en ON_ON). Hieruit besluiten we dat de kaart de
-# klasse ON_W heel slecht weergeeft en dat we niet van een significante
-# verandering kunnen spreken. Voor de rest van de validatie laten we de
-# waterklassen volledig weg.
-
-points_val <- points_val %>%
-  filter(
-    !changeclass %in% c("W_W", "ON_W", "O_W"),
-    !changeclassref %in% c("W_W", "ON_W", "O_W")
-  ) %>%
-  droplevels()
-
-# 1.2. Punten Change - nochange -----
-
-points_change <- as.data.frame(points_id) %>%
-  dplyr::select(objectid, verand, verandoord)
-
-# 1.3. Punten originele lg-klassen ------
-
-points_id_orig <- points %>%
-  # puntenset met 1 waarde per objectid
-  # filter(klasse != "verandering") %>%
-  rename(lu2013map = lu2013, lu2016map = lu2016, verandmap = verandering) %>%
-  spread(klasse, oordeel) %>%
-  group_by(objectid, eval) %>%
-  summarise(
-    lu2013map = first(lu2013map), lu2016map = first(lu2016map),
-    verandmap = first(verandmap),
-    lu13oord = first(na.omit(lu2013)), lu16oord = first(na.omit(lu2016)),
-    verandoord = first(na.omit(verandering))
-  ) %>%
-  group_by(objectid) %>%
-  sample_n(1) %>%
-  na.omit() %>%
-  mutate(code13 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu2013map,
-    perl = TRUE
-  )) %>%
-  mutate(code16 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu2016map,
-    perl = TRUE
-  )) %>%
-  unite(changeclass, code13, code16, sep = "_") %>%
-  mutate(code13 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu13oord,
-    perl = TRUE
-  )) %>%
-  mutate(code16 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu16oord,
-    perl = TRUE
-  )) %>%
-  unite(changeclassref, code13, code16, sep = "_")
-
-points_lu <- as.data.frame(points_id_orig) %>%
-  dplyr::select(objectid, changeclass, changeclassref)
-
-points_lu <- points_lu %>%
-  filter(!str_detect(changeclass, "W"), !str_detect(changeclassref, "W")) %>%
-  # alles met water in weglaten
-  droplevels()
-
-points_lu <- points_lu %>%
-  # er ontbreken een aantal klassen in de referentieset
-  add_row(objectid = 5001, changeclass = NA, changeclassref = "B_HG") %>%
-  add_row(objectid = 5002, changeclass = NA, changeclassref = "HG_B") %>%
-  add_row(objectid = 5003, changeclass = NA, changeclassref = "HG_ON") %>%
-  add_row(objectid = 5004, changeclass = NA, changeclassref = "O_ON") %>%
-  add_row(objectid = 5005, changeclass = NA, changeclassref = "U_B") %>%
-  add_row(objectid = 5006, changeclass = NA, changeclassref = "U_G") %>%
-  add_row(objectid = 5007, changeclass = NA, changeclassref = "U_ON")
-
-# 2. Oppervlaktes -----
-# 2.1. Validatieklassen ----
-# Veranderingen van de waterklassen worden niet meegenomen -> klasse 8 (water)
-
-lgarea <- combine %>%
-  dplyr::select(LG2013_ChangeCla, LG2016_ChangeCla, Count) %>%
-  rename(
-    lu2013 = LG2013_ChangeCla, lu2016 = LG2016_ChangeCla,
-    count = Count
-  ) %>%
-  left_join(dplyr::select(tbltrans, valid, lucode),
-    by = c("lu2013" = "lucode")
-  ) %>%
-  rename(val2013 = valid) %>%
-  left_join(dplyr::select(tbltrans, valid, lucode),
-    by = c("lu2016" = "lucode")
-  ) %>%
-  rename(val2016 = valid) %>%
-  mutate(codeval13 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", val2013,
-    perl = TRUE
-  )) %>%
-  mutate(codeval16 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", val2016,
-    perl = TRUE
-  )) %>%
-  unite(class, codeval13, codeval16, sep = "_") %>%
-  dplyr::select(class, count) %>%
-  group_by(class) %>%
-  summarise(count = sum(count)) %>%
-  filter(!str_detect(class, "W")) %>%
-  # alles met water in weglaten
-  droplevels() %>%
-  mutate(area = count / sum(count))
-
-# 2.2. Change - no change ----
-
-lgarea_change <- lgarea %>%
-  mutate(change = ifelse(!class %in% c("A_A", "HG_HG", "O_O", "ON_ON", "U_U"),
-    "change", "nochange"
-  )) %>%
-  group_by(change) %>%
-  summarise(count = sum(count), area = sum(area))
-
-# 2.3. Originele landgebruiksklassen ----
-
-lgarea_lu <- combine %>%
-  dplyr::select(LG2013_ChangeCla, LG2016_ChangeCla, Count) %>%
-  rename(
-    lu2013code = LG2013_ChangeCla, lu2016code = LG2016_ChangeCla,
-    count = Count
-  ) %>%
-  left_join(dplyr::select(tbltrans, lucode, lu),
-    by = c("lu2013code" = "lucode")
-  ) %>%
-  rename(lu2013 = lu) %>%
-  left_join(dplyr::select(tbltrans, lucode, lu),
-    by = c("lu2016code" = "lucode")
-  ) %>%
-  rename(lu2016 = lu) %>%
-  mutate(code13 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu2013,
-    perl = TRUE
-  )) %>%
-  mutate(code16 = gsub("\\b(\\pL)\\pL{2,}|.", "\\U\\1", lu2016,
-    perl = TRUE
-  )) %>%
-  unite(class, code13, code16, sep = "_") %>%
-  dplyr::select(class, count) %>%
-  group_by(class) %>%
-  summarise(count = sum(count)) %>%
-  filter(!str_detect(class, "W")) %>%
-  # alles met water in weglaten
-  droplevels() %>%
-  mutate(area = count / sum(count))
+```
+## Results for the updated map with BAK
+```{r results='asis'}
+title <- "the original land use maps, updated with BAK"
+mapdata1 <- bak13$valid_eng
+refdata1 <- as.factor(points_id$lu13oord_eng)
+mapdata2 <- bak16$valid_eng
+refdata2 <- as.factor(points_id$lu16oord_eng)
+options(knitr.duplicate.label = "allow")
 ```
 
-
-```{r analyse, results='hide', cache = TRUE}
-
-# CONFUSIONMATRIX -------------------------------------------------
-# Confusionmatrices maken via package Caret
-confus_val <- confusionMatrix(as.factor(points_val$changeclass),
-  as.factor(points_val$changeclassref),
-  dnn = c("Map", "Reference")
-)
-confus_change <- confusionMatrix(as.factor(points_change$verand),
-  as.factor(points_change$verandoord),
-  dnn = c("Map", "Reference")
-)
-confus_lu <- confusionMatrix(as.factor(points_lu$changeclass),
-  as.factor(points_lu$changeclassref),
-  dnn = c("Map", "Reference")
-)
-
-ma_val <- as.data.frame.matrix(confus_val$table)
-ma_change <- as.data.frame.matrix(confus_change$table)
-ma_lu <- as.data.frame.matrix(confus_lu$table)
-
-# VALIDATIE -------------------------------------------------------
-# Methode Olofsson et al., 2014 - Code uit het FAO tool
-
-# Hulpvariabelen
-maparea_val <- lgarea %>% # Analyse validatieklassen
-  dplyr::pull(2)
-maparea_change <- lgarea_change %>% # Analyse change - no change
-  dplyr::pull(2)
-maparea_lu <- lgarea_lu %>% # Analyse originele lu-klassen
-  dplyr::pull(2)
-
-pixelsize <- 0.01 # the size of each pixel in ha (10mx10m = 0,01 ha)
-
-### Function to estimate accuracies
-validation <- function(ma, maparea) {
-  dyn <- rownames(ma)
-  aoi <- sum(maparea) # calculate the area proportions for each map class
-  propmaparea <- maparea / aoi
-
-  # convert the absolute cross tab into a probability cross tab
-  ni <- rowSums(ma) # number of reference points per map class
-  propma <- as.matrix(ma / ni * propmaparea)
-  propma[is.nan(propma)] <- 0 # for classes with ni. = 0
-
-  # estimate the accuracies now
-  oa <- sum(diag(propma))
-  # overall accuracy (Eq. 1 in Olofsson et al. 2014)
-  ua <- diag(propma) / rowSums(propma)
-  # user's accuracy (Eq. 2 in Olofsson et al. 2014)
-  pa <- diag(propma) / colSums(propma)
-  # producer's accuracy (Eq. 3 in Olofsson et al. 2014)
-
-  # estimate confidence intervals for the accuracies
-  v_oa <- sum(propmaparea^2 * ua * (1 - ua) / (ni - 1), na.rm = TRUE)
-  # variance of overall accuracy (Eq. 5 in Olofsson et al. 2014)
-
-  v_ua <- ua * (1 - ua) / (rowSums(ma) - 1)
-  # variance of user's accuracy (Eq. 6 in Olofsson et al. 2014)
-
-  # variance of producer's accuracy (Eq. 7 in Olofsson et al. 2014)
-  n_j <- array(0, dim = length(dyn))
-  aftersumsign <- array(0, dim = length(dyn))
-  for (cj in seq_len(length(dyn))) {
-    n_j[cj] <- sum(maparea / ni * ma[, cj], na.rm = TRUE)
-    aftersumsign[cj] <- sum(maparea[-cj]^2 * ma[-cj, cj] / ni[-cj] *
-      (1 - ma[-cj, cj] / ni[-cj]) /
-      (ni[-cj] - 1), na.rm = TRUE)
-  }
-  v_pa <- 1 / n_j^2 * (maparea^2 * (1 - pa)^2 * ua * (1 - ua) / (ni - 1) +
-    pa^2 * aftersumsign)
-  v_pa[is.nan(v_pa)] <- 0
-
-  ### Estimate area
-
-  # proportional area estimation
-  propareaest <- colSums(propma)
-  # proportion of area (Eq. 8 in Olofsson et al. 2014)
-
-  # standard errors of the area estimation (Eq. 10 in Olofsson et al. 2014)
-  v_propareaest <- array(0, dim = length(dyn))
-  for (cj in seq_len(length(dyn))) {
-    v_propareaest[cj] <- sum((propmaparea * propma[, cj] - propma[, cj]^2) /
-      (rowSums(ma) + 0.001 - 1)) # + 0.001 voor klassen met maar 1 punt
-  }
-  v_propareaest[is.na(v_propareaest)] <- 0
-
-  # produce the overview table
-  ov <- as.data.frame(round(propma, 3))
-  ov$class <- rownames(ov)
-  ov <- dplyr::select(ov, class)
-  ov$totpunt <- rowSums(ma)
-  ov$area_ha <- round(maparea * pixelsize) # in ha
-  ov$prop_area <- round(propmaparea, 3)
-  ov$adj_proparea <- round(propareaest, 3)
-  ov$ci_adj_proparea <- round(1.96 * sqrt(v_propareaest), 3)
-  ov$adj_area <- round(ov$adj_proparea * aoi * pixelsize, 3)
-  # in ha
-  ov$ci_adj_area <- round(1.96 * sqrt(v_propareaest) * aoi * pixelsize, 3)
-  # in ha
-  ov$ua <- round(ua, 3)
-  ov$ci_ua <- round(1.96 * sqrt(v_ua), 3)
-  ov$pa <- round(pa, 3)
-  ov$ci_pa <- round(1.96 * sqrt(v_pa), 3)
-  rownames(ov) <- colnames(ma)
-  ov$oa <- c(round(oa, 3), rep(NA, times = length(dyn) - 1))
-  ov$ci_oa <- c(round(1.96 * sqrt(v_oa), 3), rep(NA, times = length(dyn) - 1))
-  ov
-}
-
-ov_val <- validation(ma = ma_val, maparea = maparea_val)
-ov_change <- validation(ma = ma_change, maparea = maparea_change)
-ov_lu <- validation(ma = ma_lu, maparea = maparea_lu)
+```{r callchild3, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childbak-'}
 
 ```
 
+## Results for the updated map with improved grassland
+
+```{r results='asis'}
+title <- "the original land use maps, updated with improved grassland"
+mapdata1 <- gras13$valid_eng
+refdata1 <- as.factor(points_id$lu13oord_eng)
+mapdata2 <- gras16$valid_eng
+refdata2 <- as.factor(points_id$lu16oord_eng)
+options(knitr.duplicate.label = "allow")
+```
+
+```{r callchild4, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childgras-'}
+
+```
+
+## Results for the updated map, improved with boswijzer, BAK, and grasslands
+
+```{r results='asis', fig.path='figure/childall-'}
+title <- "the original land use maps, updated with BAK"
+mapdata1 <- all13$valid_eng
+refdata1 <- as.factor(points_id$lu13oord_eng)
+mapdata2 <- all16$valid_eng
+refdata2 <- as.factor(points_id$lu16oord_eng)
+options(knitr.duplicate.label = "allow")
+```
+
+```{r callchild5, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childall-'}
+
+```

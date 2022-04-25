@@ -5,3 +5,5 @@
 data/*
 src/Index_cache/*
 src/libs/*
+*.pdf
+*.html
