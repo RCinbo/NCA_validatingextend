@@ -1,5 +1,7 @@
 library(assertthat)
 library(caret) # Confusion matrix maken
+
+
 cleanmapdata <- function(data = data, points_id, tbltrans){
   map <- terra::extract(x = data,
                  y = terra::vect(
@@ -18,7 +20,31 @@ cleanmapdata <- function(data = data, points_id, tbltrans){
                                          "Hoog groen", "8" = "Water", "9" = "Overig"
            )) %>%
     left_join(tbltrans[,-1], by = c("code" = "lucode")) %>% droplevels()
+  rm(data)
   return(map)
+}
+
+Cleanchangeareadata <- function(file, tbltrans){
+  maparea <- read_csv2(file = sprintf("%s/%s",here(),file))
+  maparea %>% mutate(LG2013 = as.factor(LG2013),
+                     LG2016 = as.factor(LG2016)) %>%
+    left_join(tbltrans[,c("lucode", "valid_eng")],
+              by = c('LG2013' = "lucode")) %>%
+    dplyr::select(-LG2013) %>%
+    rename(LG2013 = valid_eng) %>%
+    left_join(tbltrans[,c("lucode", "valid_eng")],
+              by = c('LG2016' = "lucode")) %>%
+    dplyr::select(-LG2016) %>%
+    rename(LG2016 = valid_eng) %>%
+    filter(LG2013 != "Water" &
+             LG2016 != "Water") %>%
+    mutate(changecat = as.factor(str_c(LG2013, LG2016, sep = "-")),
+           changebool = as.factor(ifelse(LG2013 == LG2016,
+                                         "No change", "Change"))) %>%
+    group_by(changecat, changebool) %>%
+    summarize(area = sum(Count)) %>%
+    ungroup() %>%
+    arrange(changecat)
 }
 #mapdata <- nara13$valid
 #refdata <- as.factor(points_id$lu13oord)
@@ -36,25 +62,133 @@ CalculateAccuracy <- function(mapdata, refdata){
   return(conf)
 }
 
-library(assertthat)
-library(caret) # Confusion matrix maken
-#mapdata <- nara13$valid
-#refdata <- as.factor(points_id$lu13oord)
-#both arrays need to be factor variables with the same levels.
-CalculateAccuracyChange <- function(mapdata1, refdata1, mapdata2, refdata2){
-  assert_that(length(mapdata1) == length(refdata1) &
-                length(mapdata1) == length(refdata2) &
-                length(mapdata2) == length(refdata2),
-              msg = "Length of the arrays is not equal")
-  assert_that(nlevels(mapdata1) == nlevels(refdata1) &
-                nlevels(mapdata1) == nlevels(refdata2) &
-                nlevels(mapdata2) == nlevels(refdata2) &
-                all(levels(mapdata1) %in% levels(refdata1)) &
-                all(levels(mapdata1) %in% levels(refdata2)) &
-                all(levels(mapdata2) %in% levels(refdata2)),
-              msg = "The data are not factors or do not have the same levels.")
+
+#maparea is the surface area of each change class
+#ma is the confusion matrix for the change classes
+Validationuncertainty <- function(ma, maparea, pixelsize) {
+  dyn <- rownames(ma)
+  aoi <- sum(maparea) # calculate the area proportions for each map class
+  propmaparea <- maparea / aoi
+
+  # convert the absolute cross tab into a probability cross tab
+  ni <- rowSums(ma) # number of reference points per map class
+  propma <- as.matrix(ma / ni * propmaparea)
+  propma[is.nan(propma)] <- 0 # for classes with ni. = 0
+
+   pa <- diag(propma) / colSums(propma)
+ # estimate the accuracies
+  oa <- sum(diag(propma))
+  # overall accuracy (Eq. 1 in Olofsson et al. 2014)
+  ua <- diag(propma) / rowSums(propma)
+  # user's accuracy (Eq. 2 in Olofsson et al. 2014)
+  # producer's accuracy (Eq. 3 in Olofsson et al. 2014)
+
+  # estimate confidence intervals for the accuracies
+  v_oa <- sum(propmaparea^2 * ua * (1 - ua) / (ni - 1), na.rm = TRUE)
+  # variance of overall accuracy (Eq. 5 in Olofsson et al. 2014)
+
+  v_ua <- ua * (1 - ua) / (rowSums(ma) - 1)
+  # variance of user's accuracy (Eq. 6 in Olofsson et al. 2014)
+
+  # variance of producer's accuracy (Eq. 7 in Olofsson et al. 2014)
+  n_j <- array(0, dim = length(dyn))
+  aftersumsign <- array(0, dim = length(dyn))
+  for (cj in seq_len(length(dyn))) {
+    n_j[cj] <- sum(maparea / ni * ma[, cj], na.rm = TRUE)
+    aftersumsign[cj] <- sum(maparea[-cj]^2 * ma[-cj, cj] / ni[-cj] *
+                              (1 - ma[-cj, cj] / ni[-cj]) /
+                              (ni[-cj] - 1), na.rm = TRUE)
+  }
+  v_pa <- 1 / n_j^2 * (maparea^2 * (1 - pa)^2 * ua * (1 - ua) / (ni - 1) +
+                         pa^2 * aftersumsign)
+  v_pa[is.nan(v_pa)] <- 0
+
+  ### Estimate area
+
+  # proportional area estimation
+  propareaest <- colSums(propma)
+  # proportion of area (Eq. 8 in Olofsson et al. 2014)
+
+  # standard errors of the area estimation (Eq. 10 in Olofsson et al. 2014)
+  v_propareaest <- array(0, dim = length(dyn))
+  for (cj in seq_len(length(dyn))) {
+    v_propareaest[cj] <- sum((propmaparea * propma[, cj] - propma[, cj]^2) /
+                               (rowSums(ma) + 0.001 - 1)) # + 0.001 voor klassen met maar 1 punt
+  }
+  v_propareaest[is.na(v_propareaest)] <- 0
+
+  # produce the overview table
+  ov <- as.data.frame(round(propma, 3))
+  ov$class <- rownames(ov)
+  ov <- dplyr::select(ov, class)
+  ov$totpunt <- rowSums(ma)
+  ov$area_ha <- round(maparea * pixelsize) # in ha
+  ov$prop_area <- round(propmaparea, 3)
+  ov$adj_proparea <- round(propareaest, 3)
+  ov$ci_adj_proparea <- round(1.96 * sqrt(v_propareaest), 3)
+  ov$adj_area <- round(ov$adj_proparea * aoi * pixelsize, 3)
+  # in ha
+  ov$ci_adj_area <- round(1.96 * sqrt(v_propareaest) * aoi * pixelsize, 3)
+  # in ha
+  ov$ua <- round(ua, 3)
+  ov$ci_ua <- round(1.96 * sqrt(v_ua), 3)
+  ov$pa <- round(pa, 3)
+  ov$ci_pa <- round(1.96 * sqrt(v_pa), 3)
+  rownames(ov) <- colnames(ma)
+  ov$oa <- c(round(oa, 3), rep(NA, times = length(dyn) - 1))
+  ov$ci_oa <- c(round(1.96 * sqrt(v_oa), 3), rep(NA, times = length(dyn) - 1))
+  ov
+}
 
 
+PlotValidationData <- function(ov){
+  plot_val <- ov %>%
+    dplyr::select(class, area_ha, adj_area, ci_adj_area, ua, pa) %>%
+    mutate(conf.low = adj_area - ci_adj_area, conf.high = adj_area +
+             ci_adj_area) %>%
+    mutate(signif0 = ifelse(conf.low <= 0, "", "*")) %>%
+    separate(class, c("lu13", "lu16"), sep = "-", remove = FALSE) %>%
+    unite("classfull", lu13:lu16, sep = " > ", remove = FALSE) %>%
+    mutate(paperc = scales::percent(pa, accuracy = 1)) %>%
+    mutate(uaperc = scales::percent(ua, accuracy = 1))
+
+  options(scipen = 999)
+
+  bar <- ggplot(
+    plot_val %>% filter(lu13!=lu16),
+    aes(x = classfull, y = adj_area, text = paste(
+      "PA:", paperc, " - UA:", uaperc,
+      "\nValidated area:", round(adj_area), " ha",
+      "\nArea on the map:", round(area_ha), " ha",
+      "\nCI:", round(conf.low), " ha - ", round(conf.high), " ha"
+    ))
+  ) +
+    geom_bar(aes(fill = lu13),
+             stat = "identity", position = "dodge",
+             width = 0.7
+    ) +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                  width = 0.2,
+                  colour = "black", position = position_dodge(width = 0.7)
+    ) +
+    geom_point(aes(y = area_ha), colour = "black") +
+    labs(y = "Area (ha)", fill = "Class 2013") +
+    geom_text(aes(y = -1000, label = signif0), colour = inbo_hoofd) +
+    theme(
+      axis.title.x = element_text(margin = margin(
+        t = 5, r = 0, b = 0,
+        l = 0
+      ), hjust = 0),
+      axis.line.x = element_line(color = "black"),
+      axis.title.y = element_blank(),
+      axis.line.y = element_line(color = "black"),
+      panel.grid.major.x = element_line(colour = "grey", linetype = "dotted"),
+      panel.grid.major.y = element_blank(),
+      legend.key.size = unit(0.3, "cm")
+    ) +
+    coord_flip()
+
+  return(bar)
 }
 
 validationData <- function(){
@@ -77,13 +211,30 @@ validationData <- function(){
     "Open nature", "High green", "Water", "Other"
   )
   validcode <- c(1, 2, 1, 4, 5, 1, 2, 8, 9)
-  tbltrans <- data.frame(lu, lucode, valid, valid_eng, validcode) %>%
-    mutate(valid = as.factor(valid),
+  tbltrans2 <- data.frame(lu, lucode, valid, valid_eng, validcode)
+  tbltrans <- tbltrans2 %>% mutate(valid = as.factor(valid),
            valid_eng = as.factor(valid_eng),
            lucode = as.factor(lucode),
            validcode = as.factor(validcode),
            lu = as.factor(lu))
 
+  combine <- combine %>%
+    mutate(LG2013_ChangeCla = as.factor(LG2013_ChangeCla),
+                     LG2016_ChangeCla = as.factor(LG2016_ChangeCla)) %>%
+    left_join(tbltrans[,c("lucode", "valid_eng")],
+              by = c('LG2013_ChangeCla' = "lucode")) %>%
+    rename(LG2013 = valid_eng) %>%
+    left_join(tbltrans[,c("lucode", "valid_eng")],
+              by = c('LG2016_ChangeCla' = "lucode")) %>%
+    rename(LG2016 = valid_eng) %>%
+    filter(LG2013 != "Water" &
+                    LG2016 != "Water") %>%
+    mutate(changecat = as.factor(str_c(LG2013, LG2016, sep = "-")),
+           changebool = as.factor(ifelse(LG2013 == LG2016,
+                                          "No change", "Change"))) %>%
+    group_by(changecat, changebool) %>%
+    summarize(area = sum(Count)) %>%
+    ungroup()
   # OPMAAK DATASET -----------------------------------------------------
   # De dataset met validatiepunten bevat informatie over de verandering van een
   # cel (0/1) en de aard van de verandering (klasse A -> klasse B). Voor de
@@ -146,12 +297,12 @@ validationData <- function(){
     filter(n >= 1) %>%
     # alleen punten die gevalideerd zijn
     arrange(objectid) %>%
-    left_join(dplyr::select(tbltrans, valid, lu), by = c("lu2013" = "lu")) %>%
+    left_join(dplyr::select(tbltrans2, valid, lu), by = c("lu2013" = "lu")) %>%
     rename(luval13 = valid) %>%
     # validatieklassen toevoegen (= aggregatie van oorspronkelijke lu-klassen)
-    left_join(dplyr::select(tbltrans, valid, lu), by = c("lu2016" = "lu")) %>%
+    left_join(dplyr::select(tbltrans2, valid, lu), by = c("lu2016" = "lu")) %>%
     rename(luval16 = valid) %>%
-    left_join(dplyr::select(tbltrans, valid, lu), by = c("oordeel" = "lu")) %>%
+    left_join(dplyr::select(tbltrans2, valid, lu), by = c("oordeel" = "lu")) %>%
     rename(oordeelval = valid) %>%
     group_by(objectid, eval) %>%
     mutate(oordeelval = ifelse(is.na(oordeelval),
@@ -200,8 +351,7 @@ validationData <- function(){
                             perl = TRUE
     )) %>%
     unite(changeclassref, codeval13, codeval16, sep = "_") %>%
-    left_join(punten[, c('objectid', 'POINT_X', 'POINT_Y')],
-              by = c("objectid" = "objectid")) %>%
+    as.data.frame() %>%
     mutate(
       changeclass = as.factor(changeclass),
       changeclassref = as.factor(changeclassref)
@@ -211,16 +361,18 @@ validationData <- function(){
       !changeclassref %in% c("W_W", "ON_W", "O_W")
     ) %>%
     droplevels() %>%
-    left_join(unique(tbltrans[,c("valid", "valid_eng")]),
+    left_join(punten[, c('objectid', 'POINT_X', 'POINT_Y')],
+              by = c("objectid" = "objectid"))  %>%
+    # left_join(unique(tbltrans[,c("valid", "valid_eng")]),
+    #           by = c("lu13oord" = "valid")) %>%
+    # rename(valid_eng = lu13oord) %>%
+    left_join(unique(tbltrans2[,c("valid", "valid_eng")]),
               by = c("lu13oord" = "valid")) %>%
-    rename(valid_eng = lu13oord) %>%
-    left_join(unique(tbltrans[,c("valid", "valid_eng")]),
-              by = c("lu13oord" = "valid")) %>%
-    rename(lu13oord_eng = valid_eng ) %>%
-    left_join(unique(tbltrans[,c("valid", "valid_eng")]),
+    rename(lu13oord_eng = valid_eng) %>%
+    left_join(unique(tbltrans2[,c("valid", "valid_eng")]),
               by = c("lu16oord" = "valid")) %>%
     rename(lu16oord_eng = valid_eng )
-  save(points_id, tbltrans, file = "data/validation.Rdata")
+  save(points_id, tbltrans, combine, file = "data/validation.Rdata")
 
   ############################# Get areas #################################
   lgarea <- combine %>%
@@ -295,5 +447,3 @@ validationData <- function(){
     droplevels() %>%
     mutate(area = count / sum(count))
 }
-
-
