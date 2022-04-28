@@ -1,18 +1,33 @@
 
+```{r {{id}}-setup}
+if (interactive()) {
+  this_map <- sample(c("nara", "bosw", "bak","gras","all"), 1)
+} else {
+  this_map <- "{{id}}"
+}
+title <- ttl[[this_map]]
+mapdata1 <- data[[str_c(this_map, "2013")]]$valid_eng
+refdata1 <- as.factor(points_id$lu13oord_eng)
+mapdata2 <- data[[str_c(this_map, "2016")]]$valid_eng
+refdata2 <- as.factor(points_id$lu16oord_eng)
+maparea <- area[[this_map]]
+```
+## Evaluation of `r title`
+
 This section evaluates `r as.character(title)` from 2013 and 2016 and also evaluates how well it captures land use changes.
 
 ### Accuracy of land use in the maps
 
 #### Map of 2013
-```{r time1accuracy, include=FALSE}
+```{r {{id}}-time1accuracy, include=FALSE}
 source(sprintf("%s/src/NCA_functions.R",here()))
 res1 <- CalculateAccuracy(mapdata1, refdata1)
 
 ```
 
-The overall accuracy is `r round(100*unname(res1$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:accuracybylu1) shows several accuracy measures for each of the land uses separately. The user's accuracy (sensititvity) and producer's accuracy (specificity) is also shown in Figure \@ref(fig:userproducer).
+The overall accuracy is `r round(100*unname(res1$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracybylu1) shows several accuracy measures for each of the land uses separately. The user's accuracy (sensititvity) and producer's accuracy (specificity) is also shown in Figure \@ref(fig:{{id}}-userproducer).
 
-```{r accuracybylu1, include=TRUE}
+```{r {{id}}-accuracybylu1, include=TRUE}
 t(res1$byClass) %>% 
   kable(caption = str_c("Accuracy by land use for 2013 for ", title, ". "),
         row.names = TRUE,
@@ -22,14 +37,14 @@ t(res1$byClass) %>%
 
 #### Map of 2016
 
-```{r time2accuracy, include=FALSE}
+```{r {{id}}-time2accuracy, include=FALSE}
 source(sprintf("%s/src/NCA_functions.R",here()))
 res2 <- CalculateAccuracy(mapdata2, refdata2)
 
 ```
 
-The overall accuracy is `r round(100*unname(res2$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:accuracybylu2) shows several accuracy measures for each of the land uses separately. 
-```{r accuracybylu2, include=TRUE}
+The overall accuracy is `r round(100*unname(res2$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracybylu2) shows several accuracy measures for each of the land uses separately. 
+```{r {{id}}-accuracybylu2, include=TRUE}
 t(res2$byClass) %>% 
   kable(caption = str_c("Accuracy by land use for 2016 for ", title, ". "),
         row.names = TRUE,
@@ -37,9 +52,9 @@ t(res2$byClass) %>%
         booktabs = TRUE) 
 ```
 
-Figure \@ref(fig:userproducer) shows the user and producer accuracy for each of the landuse categories and for each of the years.
+Figure \@ref(fig:{{id}}-userproducer) shows the user and producer accuracy for each of the landuse categories and for each of the years.
 
-```{r userproducer, include=TRUE, fig.cap=str_c("UA and PA for each of the land uses and for each of the years for ",title,". ")}
+```{r {{id}}-userproducer, include=TRUE, fig.cap=str_c("UA and PA for each of the land uses and for each of the years for ",title,". ")}
 data.frame(users = c(res1$byClass[,5], res2$byClass[,5]),
                 producers = c(res1$byClass[,6], res2$byClass[,6]),
                 lu = rep(str_remove(rownames(res1$byClass), "Class: "),2),
@@ -56,9 +71,9 @@ data.frame(users = c(res1$byClass[,5], res2$byClass[,5]),
 
 ### Accuracy of land use changes 
 
-Apart from the accuracy of the map itself, it is also important to know the accuracy of the changes over time. As there are `r nlevels(mapdata1)` land use categories (`r str_c(levels(mapdata1), collapse = ", ")`),  there are  `r nlevels(mapdata1)*nlevels(mapdata1)` possible changes that may happen over time. Table \@ref(tab:observedchanges) shows the number of times each of the types of changes is observed on the map and in the reference dataset. Overall, the map showed land use changes in `r sum(mapdata1 != mapdata2)` cells (`r round(sum(mapdata1 != mapdata2)/length(mapdata1)*100, digits = 2)`%) while the reference dataset showed a change in land use in `r sum(refdata1 != refdata2)` out of the `r length(refdata1)` cells (`r round(sum(refdata1 != refdata2)/length(refdata1)*100, digits = 2)`%).
+Apart from the accuracy of the map itself, it is also important to know the accuracy of the changes over time. As there are `r nlevels(mapdata1)` land use categories (`r str_c(levels(mapdata1), collapse = ", ")`),  there are  `r nlevels(mapdata1)*nlevels(mapdata1)` possible changes that may happen over time. Table \@ref(tab:{{id}}-observedchanges) shows the number of times each of the types of changes is observed on the map and in the reference dataset. Overall, the map showed land use changes in `r sum(mapdata1 != mapdata2)` cells (`r round(sum(mapdata1 != mapdata2)/length(mapdata1)*100, digits = 2)`%) while the reference dataset showed a change in land use in `r sum(refdata1 != refdata2)` out of the `r length(refdata1)` cells (`r round(sum(refdata1 != refdata2)/length(refdata1)*100, digits = 2)`%).
 
-```{r observedchanges, include=TRUE}
+```{r {{id}}-observedchanges, include=TRUE}
 observed_changes <- data.frame(map = as.factor(str_c(mapdata1, mapdata2, sep = "-")),
                                ref = as.factor(str_c(refdata1, refdata2, sep = "-")),
                                mapchange = as.factor(ifelse(mapdata1 == mapdata2, 
@@ -78,16 +93,16 @@ observed_changes %>%
         booktabs = TRUE) 
 ```
 
-```{r observedchanges2, include=TRUE}
+```{r {{id}}-observedchanges2, include=TRUE}
 reschange1 <- CalculateAccuracy(observed_changes$map, observed_changes$ref)
 reschange2 <- CalculateAccuracy(observed_changes$mapchange, observed_changes$refchange)
 ```
 
-The overall accuracy is `r round(100*unname(reschange1$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:accuracybyluchange) shows several accuracy measures for each of the land use changes separately.
+The overall accuracy is `r round(100*unname(reschange1$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracybyluchange) shows several accuracy measures for each of the land use changes separately.
 
-If we look at the land use change as a 0/1 variable (change or no change) in stead of considering all different types of land use changes, the overall accuracy increases to `r round(100*unname(reschange2$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:accuracychange) shows the confusion matrix and Table \@ref(tab:accuracychange2) shows all accuracy measures.
+If we look at the land use change as a 0/1 variable (change or no change) in stead of considering all different types of land use changes, the overall accuracy increases to `r round(100*unname(reschange2$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracychange) shows the confusion matrix and Table \@ref(tab:{{id}}-accuracychange2) shows all accuracy measures.
 
-```{r accuracybyluchange, include=TRUE}
+```{r {{id}}-accuracybyluchange, include=TRUE}
 A <- reschange1$byClass[,c(1,2,5,6)] 
 rownames(A) <- str_remove(rownames(A), "Class: ")
 A %>% kable(caption = str_c("Accuracy of land use changes  for ", title, " (only some accuracy measures are shown but others can be requested)."),
@@ -95,13 +110,13 @@ A %>% kable(caption = str_c("Accuracy of land use changes  for ", title, " (only
         booktabs = TRUE) 
 ```
 
-```{r accuracychange, include=TRUE}
+```{r {{id}}-accuracychange, include=TRUE}
 reschange2$table %>% kable(caption = str_c("Confusion matrix for land use changes, only comparing change / no change for ", title, ". "),
         row.names = TRUE,
         booktabs = TRUE) 
 ```
 
-```{r accuracychange2, include=TRUE}
+```{r {{id}}-accuracychange2, include=TRUE}
 reschange2$byClass %>% 
   kable(caption = 
           str_c("Accuracy of land use changes, only comparing change / no change for ",
@@ -111,9 +126,9 @@ reschange2$byClass %>%
 
 #### Confidence intervals on the area that changed
 
-```{r uncertaintyarea, include=TRUE}
+```{r {{id}}-uncertaintyarea, include=TRUE}
 ov <- Validationuncertainty(ma = as.data.frame.matrix(reschange1$table), maparea = maparea$area, pixelsize = 0.01)#each cell is 100 square meters = 0.01ha
 ```
-```{r uncertaintyareabar, include=TRUE, fig.cap = str_c("Estimated changed area (bars) with confidence intervals versus changed area according to the map (dots) for ", title, ". Asterisks identify area changes that were significantly different from zero.")}
+```{r {{id}}-uncertaintyareabar, include=TRUE, fig.cap = str_c("Estimated changed area (bars) with confidence intervals versus changed area according to the map (dots) for ", title, ". Asterisks identify area changes that were significantly different from zero.")}
 PlotValidationData(ov)
 ```

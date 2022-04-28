@@ -2,7 +2,7 @@ library(assertthat)
 library(caret) # Confusion matrix maken
 
 
-cleanmapdata <- function(data = data, points_id, tbltrans){
+cleanmapdata <- function(data = data, points_id, tbltrans, type, year){
   map <- terra::extract(x = data,
                  y = terra::vect(
                    st_as_sf(x = points_id[, c('POINT_X','POINT_Y')],
@@ -17,17 +17,19 @@ cleanmapdata <- function(data = data, points_id, tbltrans){
            landgebruik = recode_factor(code, "1" = "Open natuur", "2" = "Bos",
                                        "3" = "Grasland", "4" = "Akker",  "5" =
                                          "Urbaan", "6" = "Laag groen", "7" =
-                                         "Hoog groen", "8" = "Water", "9" = "Overig"
-           )) %>%
+                                         "Hoog groen", "8" = "Water", "9" = "Overig"),
+           type = type,
+           year = year) %>%
     left_join(tbltrans[,-1], by = c("code" = "lucode")) %>% droplevels()
   rm(data)
   return(map)
 }
 
-Cleanchangeareadata <- function(file, tbltrans){
+Cleanchangeareadata <- function(file, tbltrans, type){
   maparea <- read_csv2(file = sprintf("%s/%s",here(),file))
   maparea %>% mutate(LG2013 = as.factor(LG2013),
-                     LG2016 = as.factor(LG2016)) %>%
+                     LG2016 = as.factor(LG2016),
+                     type = type)  %>%
     left_join(tbltrans[,c("lucode", "valid_eng")],
               by = c('LG2013' = "lucode")) %>%
     dplyr::select(-LG2013) %>%
@@ -41,7 +43,7 @@ Cleanchangeareadata <- function(file, tbltrans){
     mutate(changecat = as.factor(str_c(LG2013, LG2016, sep = "-")),
            changebool = as.factor(ifelse(LG2013 == LG2016,
                                          "No change", "Change"))) %>%
-    group_by(changecat, changebool) %>%
+    group_by(changecat, changebool, type) %>%
     summarize(area = sum(Count)) %>%
     ungroup() %>%
     arrange(changecat)

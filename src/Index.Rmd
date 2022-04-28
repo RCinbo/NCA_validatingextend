@@ -142,30 +142,50 @@ library(plotly)
 library(here)
 library(sf)
 load(sprintf("%s/data/validation.Rdata", here()))
-nara2016 <- terra::rast(sprintf("%s/data/2016/LG2016_finaal_ori.tif",here()))
-nara2013 <- terra::rast(sprintf("%s/data/2013/LG2013_finaal_ori.tif",here()))
-nara16 <- cleanmapdata(nara2016, points_id, tbltrans)
-nara13 <- cleanmapdata(nara2013, points_id, tbltrans)
+ls <- list(nara2016 = terra::rast(sprintf("%s/data/2016/LG2016_finaal_ori.tif",here())),
+           nara2013 = terra::rast(sprintf("%s/data/2013/LG2013_finaal_ori.tif",here())),
+           bosw2016 = terra::rast(sprintf("%s/data/2016/LG2016_boswijzer_update.tif",here())),
+           bosw2013 = terra::rast(sprintf("%s/data/2013/LG2013_boswijzer_update.tif",here())),
+           bak2016 = terra::rast(sprintf("%s/data/2016/LG2016_BAK_update.tif",here())),
+           bak2013 = terra::rast(sprintf("%s/data/2013/LG2013_BAK_update.tif",here())),
+           gras2016 = terra::rast(sprintf("%s/data/2016/LG2016_grasland_update.tif",here())),
+           gras2013 = terra::rast(sprintf("%s/data/2013/LG2013_grasland_update.tif",here())),
+           all2016 = terra::rast(sprintf("%s/data/2016/LG2016_finaal_update.tif",here())),
+           all2013 = terra::rast(sprintf("%s/data/2013/LG2013_finaal_update.tif",here())))
 
-bosw2016 <- terra::rast(sprintf("%s/data/2016/LG2016_boswijzer_update.tif",here()))
-bosw2013 <- terra::rast(sprintf("%s/data/2013/LG2013_boswijzer_update.tif",here()))
-bosw16 <- cleanmapdata(bosw2016, points_id, tbltrans)
-bosw13 <- cleanmapdata(bosw2013, points_id, tbltrans)
+data <- ls %>% map(function(x) 
+  cleanmapdata(data = x,
+               points_id = points_id, 
+               tbltrans = tbltrans, 
+               type = ifelse(str_detect(names(x),"ori"),"nara",
+                             ifelse(str_detect(names(x),"bos"), "bosw",
+                                    ifelse(str_detect(names(x),"BAK"),"bak",
+                                           ifelse(str_detect(names(x),"gras"),"gras","all")))), 
+               year = as.numeric(gsub("[^0-9.-]", "", names(x)))
+               )
+  )
 
-bak2016 <- terra::rast(sprintf("%s/data/2016/LG2016_BAK_update.tif",here()))
-bak2013 <- terra::rast(sprintf("%s/data/2013/LG2013_BAK_update.tif",here()))
-bak16 <- cleanmapdata(bak2016, points_id, tbltrans)
-bak13 <- cleanmapdata(bak2013, points_id, tbltrans)
+ls <- list(nara = "data/2013_2016/LG2013_LG2016_finaal_ori.csv",
+           bosw = "data/2013_2016/LG2013_LG2016_boswijzer_update.csv",
+           bak = "data/2013_2016/LG2013_LG2016_BAK_update.csv",
+           gras = "data/2013_2016/LG2013_LG2016_grasland_update.csv",
+           all = "data/2013_2016/LG2013_LG2016_finaal_update.csv")
+area <- ls %>% map(function(x) 
+  Cleanchangeareadata(file = x,
+                      tbltrans = tbltrans,
+                      type = ifelse(str_detect(x,"ori"),"nara",
+                             ifelse(str_detect(x,"bos"), "bosw",
+                                    ifelse(str_detect(x,"BAK"),"bak",
+                                           ifelse(str_detect(x,"gras"),"gras","all"))))
+                      )
+  )
+rm(ls)
+ttl <- list(nara = "the original land use map",
+           bosw = "the original land use maps, updated with the forest marker file",
+           bak = "the original land use maps, updated with BAK",
+           gras = "the original land use maps, updated with permanent grassland data",
+           all = "the original land use maps, updated with the forest marker file, BAK, and permanent grassland data")
 
-gras2016 <- terra::rast(sprintf("%s/data/2016/LG2016_grasland_update.tif",here()))
-gras2013 <- terra::rast(sprintf("%s/data/2013/LG2013_grasland_update.tif",here()))
-gras16 <- cleanmapdata(gras2016, points_id, tbltrans)
-gras13 <- cleanmapdata(gras2013, points_id, tbltrans)
-
-all2016 <- terra::rast(sprintf("%s/data/2016/LG2016_finaal_update.tif",here()))
-all2013 <- terra::rast(sprintf("%s/data/2013/LG2013_finaal_update.tif",here()))
-all16 <- cleanmapdata(all2016, points_id, tbltrans)
-all13 <- cleanmapdata(all2013, points_id, tbltrans)
 ```
 
 De basis voor deze studie zijn de [landgebruiksveranderingen volgens NARA 2020](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-ecosysteemvoorraad-landgebruiksbestand-vlaanderen).
@@ -223,85 +243,15 @@ vb %>% kable(booktabs = TRUE,
   pack_rows("Classified data", 1, 3) 
 ```
 
-## Results for the original map
-```{r results='asis', warning = FALSE, message = FALSE}
-title <- "the original land use maps"
-mapdata1 <- nara13$valid_eng
-refdata1 <- as.factor(points_id$lu13oord_eng)
-mapdata2 <- nara16$valid_eng
-refdata2 <- as.factor(points_id$lu16oord_eng)
-maparea <- Cleanchangeareadata(
-  file = "data/2013_2016/LG2013_LG2016_finaal_ori.csv", 
-  tbltrans = tbltrans)
-options(knitr.duplicate.label = "allow")
-```
-```{r callchild1, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childnara-'}
-
-```
-## Results for the updated map with boswijzer
-```{r results='asis', warning = FALSE, message = FALSE}
-title <- "the original land use maps, updated with the boswijzer"
-mapdata1 <- bosw13$valid_eng
-refdata1 <- as.factor(points_id$lu13oord_eng)
-mapdata2 <- bosw16$valid_eng
-refdata2 <- as.factor(points_id$lu16oord_eng)
-maparea <- Cleanchangeareadata(
-  file = "data/2013_2016/LG2013_LG2016_boswijzer_update.csv", 
-  tbltrans = tbltrans)
-options(knitr.duplicate.label = "allow")
-```
-```{r callchild2, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childbos-'}
-
-```
-## Results for the updated map with BAK
-```{r results='asis', warning = FALSE, message = FALSE}
-title <- "the original land use maps, updated with BAK"
-mapdata1 <- bak13$valid_eng
-refdata1 <- as.factor(points_id$lu13oord_eng)
-mapdata2 <- bak16$valid_eng
-refdata2 <- as.factor(points_id$lu16oord_eng)
-maparea <- Cleanchangeareadata(
-  file = "data/2013_2016/LG2013_LG2016_BAK_update.csv", 
-  tbltrans = tbltrans)
-options(knitr.duplicate.label = "allow")
+```{r evaluation, results = "asis", eval = TRUE}
+sapply(
+  c("nara","bosw","bak","gras","all"),
+  function(id) {
+    knit_expand("_evaluation.Rmd", id = id)
+  }
+) %>%
+  paste(collapse = "\n") -> rmd
+knit(text = rmd, quiet = TRUE) %>%
+  cat()
 ```
 
-```{r callchild3, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childbak-'}
-
-```
-
-## Results for the updated map with improved grassland
-
-```{r results='asis', warning = FALSE, message = FALSE}
-title <- "the original land use maps, updated with improved grassland"
-mapdata1 <- gras13$valid_eng
-refdata1 <- as.factor(points_id$lu13oord_eng)
-mapdata2 <- gras16$valid_eng
-refdata2 <- as.factor(points_id$lu16oord_eng)
-maparea <- Cleanchangeareadata(
-  file = "data/2013_2016/LG2013_LG2016_grasland_update.csv", 
-  tbltrans = tbltrans)
-options(knitr.duplicate.label = "allow")
-```
-
-```{r callchild4, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childgras-'}
-
-```
-
-## Results for the updated map, improved with boswijzer, BAK, and grasslands
-
-```{r results='asis', fig.path='figure/childall-', warning = FALSE, message = FALSE}
-title <- "the original land use maps, updated with BAK"
-mapdata1 <- all13$valid_eng
-refdata1 <- as.factor(points_id$lu13oord_eng)
-mapdata2 <- all16$valid_eng
-refdata2 <- as.factor(points_id$lu16oord_eng)
-maparea <- Cleanchangeareadata(
-  file = "data/2013_2016/LG2013_LG2016_finaal_update.csv", 
-  tbltrans = tbltrans)
-options(knitr.duplicate.label = "allow")
-```
-
-```{r callchild5, child = sprintf('%s/src/template/child.Rmd',here()), fig.path='figure/childall-'}
-
-```
