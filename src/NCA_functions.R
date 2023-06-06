@@ -26,7 +26,8 @@ cleanmapdata <- function(data = data, points_id, tbltrans, type, year){
 }
 
 Cleanchangeareadata <- function(file, tbltrans, type){
-  maparea <- read_csv2(file = sprintf("%s/%s",here(),file))
+  maparea <- read_csv2(file = find_root_file(file,
+                                             criterion = has_file("NCA_validatingextend.Rproj")))
   maparea %>% mutate(LG2013 = as.factor(LG2013),
                      LG2016 = as.factor(LG2016),
                      type = type)  %>%

@@ -20,12 +20,13 @@ This section evaluates `r as.character(title)` from 2013 and 2016 and also evalu
 
 #### Map of 2013
 ```{r {{id}}-time1accuracy, include=FALSE}
-source(sprintf("%s/src/NCA_functions.R",here()))
+source(find_root_file("src/NCA_functions.R", 
+                      criterion = has_file("NCA_validatingextend.Rproj")))
 res1 <- CalculateAccuracy(mapdata1, refdata1)
 
 ```
 
-The overall accuracy is `r round(100*unname(res1$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracybylu1) shows several accuracy measures for each of the land uses separately. The user's accuracy (sensititvity) and producer's accuracy (specificity) is also shown in Figure \@ref(fig:{{id}}-userproducer).
+The overall accuracy is `r round(100*unname(res1$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracybylu1) shows several accuracy measures for each of the land uses separately. The users accuracy (sensititvity) and producers accuracy (specificity) is also shown in Figure \@ref(fig:{{id}}-userproducer).
 
 ```{r {{id}}-accuracybylu1, include=TRUE}
 t(res1$byClass) %>% 
@@ -38,7 +39,6 @@ t(res1$byClass) %>%
 #### Map of 2016
 
 ```{r {{id}}-time2accuracy, include=FALSE}
-source(sprintf("%s/src/NCA_functions.R",here()))
 res2 <- CalculateAccuracy(mapdata2, refdata2)
 
 ```

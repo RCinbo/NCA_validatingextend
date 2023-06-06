@@ -2,12 +2,13 @@
 # generic options. See ?INBOmd::report() for full list and more details.
 title: Natural capital accounting
 subtitle: Validating ecosystem extent map for Flanders 
-style: INBO
+style: Flanders
 lang: en
 lot: TRUE
 lof: TRUE
+site: bookdown::bookdown_site
 author: 
-  - firstname: Raïsa  
+  - firstname: Raisa  
     name: Carmen
     email: raisa.carmen@inbo.be
     orcid: 0000-0003-1025-8702
@@ -20,8 +21,8 @@ shortauthor: Carmen, R. & Van Calster, H.
 corresponding: raisa.carmen@inbo.be
 reviewer:
   - firstname: Merlijn
-    name: Jocqué
-    email: "merlijn.jocqué@inbo.be"
+    name: Jocque
+    email: "merlijn.jocque@inbo.be"
     orcid: 0000-0002-7196-7476
 year: 2022
 cover_photo: https://www.pexels.com/nl-nl/foto/hout-natuur-rood-creatief-4599227
@@ -52,14 +53,13 @@ print:
   motivation: geen kopies vereist
   pages: 100
 # HTML report specific options. See ?INBOmd::gitbook() for full list and more details.
-github-repo:
 bibliography: references.bib
 link-citations: TRUE
-site: bookdown::bookdown_site
 output:
   INBOmd::report: default
   INBOmd::ebook: default
   INBOmd::gitbook: default
+  bookdown::dont_run: default
 ---
 
 # Dankwoord {.unnumbered}
@@ -86,12 +86,6 @@ Insert a translation of the summary here. \eenglish
 
 \bfrench
 
-# Résumé français {#resume-francais .unnumbered}
-
-Ajoutez éventuellement une traduction du résumé ici.
-
-\efrench
-
 <!-- hier komt de inhoudstafel bij pdf -->
 
 \mainmatter
@@ -102,9 +96,13 @@ Dit document vergelijkt verschillende ecosystem extent/landgebruik kaarten voor 
 
 ```{r setup, include = FALSE}
 library(here)
+library(rprojroot)
 library(knitr)
 library(kableExtra)
-source(sprintf("%s/src/NCA_functions.R",here()))
+setwd(find_root_file("", 
+                      criterion = has_file("NCA_validatingextend.Rproj")))
+source(find_root_file("src/NCA_functions.R", 
+                      criterion = has_file("NCA_validatingextend.Rproj")))
 opts_chunk$set(
   echo = FALSE,
   eval = TRUE,
@@ -141,17 +139,38 @@ library(git2rdata)
 library(plotly)
 library(here)
 library(sf)
-load(sprintf("%s/data/validation.Rdata", here()))
-ls <- list(nara2016 = terra::rast(sprintf("%s/data/2016/LG2016_finaal_ori.tif",here())),
-           nara2013 = terra::rast(sprintf("%s/data/2013/LG2013_finaal_ori.tif",here())),
-           bosw2016 = terra::rast(sprintf("%s/data/2016/LG2016_boswijzer_update.tif",here())),
-           bosw2013 = terra::rast(sprintf("%s/data/2013/LG2013_boswijzer_update.tif",here())),
-           bak2016 = terra::rast(sprintf("%s/data/2016/LG2016_BAK_update.tif",here())),
-           bak2013 = terra::rast(sprintf("%s/data/2013/LG2013_BAK_update.tif",here())),
-           gras2016 = terra::rast(sprintf("%s/data/2016/LG2016_grasland_update.tif",here())),
-           gras2013 = terra::rast(sprintf("%s/data/2013/LG2013_grasland_update.tif",here())),
-           all2016 = terra::rast(sprintf("%s/data/2016/LG2016_finaal_update.tif",here())),
-           all2013 = terra::rast(sprintf("%s/data/2013/LG2013_finaal_update.tif",here())))
+load(find_root_file("data/validation.Rdata", 
+                    criterion = has_file("NCA_validatingextend.Rproj")))
+ls <- list(nara2016 = terra::rast(
+  find_root_file("data/2016/LG2016_finaal_ori.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           nara2013 = terra::rast(
+  find_root_file("data/2013/LG2013_finaal_ori.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           bosw2016 = terra::rast(
+  find_root_file("data/2016/LG2016_boswijzer_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           bosw2013 = terra::rast(
+  find_root_file("data/2013/LG2013_boswijzer_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           bak2016 = terra::rast(
+  find_root_file("data/2016/LG2016_BAK_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           bak2013 = terra::rast(
+  find_root_file("data/2013/LG2013_BAK_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           gras2016 = terra::rast(
+  find_root_file("data/2016/LG2016_grasland_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           gras2013 = terra::rast(
+  find_root_file("data/2013/LG2013_grasland_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           all2016 = terra::rast(
+  find_root_file("data/2016/LG2016_finaal_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))),
+           all2013 = terra::rast(
+  find_root_file("data/2013/LG2013_finaal_update.tif", 
+                 criterion = has_file("NCA_validatingextend.Rproj"))))
 
 data <- ls %>% map(function(x) 
   cleanmapdata(data = x,
@@ -190,41 +209,41 @@ ttl <- list(nara = "the original land use map",
 
 De basis voor deze studie zijn de [landgebruiksveranderingen volgens NARA 2020](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-ecosysteemvoorraad-landgebruiksbestand-vlaanderen).
 
-Het Landgebruiksbestand Vlaanderen van het Departement Omgeving combineert gegevens uit diverse GIS-lagen en andere (ruimtelijke) databanken [@poelmans2019landgebruik]. Die gegevens zijn volgens een bepaalde volgorde samengevoegd in een geodatabase met 4 rasterlagen met een 10m-resolutie (1 are): niveau 1 bodembedekking (22 klassen); niveau 2 verstedelijkt landgebruik (39 klassen); niveau 3 multifunctioneel landgebruik (6 klassen); en niveau 4 haventerreinen en militaire domeinen (2 klassen). Deze lagen worden in een bepaalde volgorde verder gecombineerd tot een éénlagige gebiedsdekkende landgebruikskaart (18 klassen) [@poelmans2019landgebruik]. Voor de landgebruiksveranderingenoefening van het natuurrapport 2020 is de bodembedekkingslaag van het Landgebruiksbestand Vlaanderen 2016 als volgt aangepast:
+Het Landgebruiksbestand Vlaanderen van het Departement Omgeving combineert gegevens uit diverse GIS-lagen en andere (ruimtelijke) databanken [@poelmans2019landgebruik]. Die gegevens zijn volgens een bepaalde volgorde samengevoegd in een geodatabase met 4 rasterlagen met een 10m-resolutie (1 are): niveau 1 bodembedekking (22 klassen); niveau 2 verstedelijkt landgebruik (39 klassen); niveau 3 multifunctioneel landgebruik (6 klassen); en niveau 4 haventerreinen en militaire domeinen (2 klassen). Deze lagen worden in een bepaalde volgorde verder gecombineerd tot een eenlagige gebiedsdekkende landgebruikskaart (18 klassen) [@poelmans2019landgebruik]. Voor de landgebruiksveranderingenoefening van het natuurrapport 2020 is de bodembedekkingslaag van het Landgebruiksbestand Vlaanderen 2016 als volgt aangepast:
 
 -   In het Schelde-estuarium zijn de slikken en schorren aangepast op basis van ecotopenkaarten voor 2013 en 2016, waarbij de slikken en schorren voorrang krijgen op de waterlaag of andere terrestrische klassen (bv. overig laag groen).
--   In het IJzer- en het Schelde-estuarium is het water in de zone onder getijdeninvloed geherklasseerd tot een extra klasse 'overgangswater', het overig water wordt beschouwd als 'zoetwater'.
--   De wateroppervlakte voor de kust is uitgebreid tot het volledige Belgische deel van de Noordzee en als 'marien' geklasseerd.
--   De bodembedekkingsklasse 'ruigte en struweel' is opgesplitst in 'ruigte' en 'struweel' op basis van de rasterlaag 'BWK_natuur'.
--   Landbouwpercelen die in 2015 (of 2012) als grasland zijn aangegeven en waarvoor in één of meer van de vier voorgaande jaren een andere teelt is aangegeven, zijn geherklasseerd als akker. Grasland krijgt hierdoor de betekenis van blijvend (vijfjarig) cultuurgrasland. Stappen 1 tot 5 resulteren in een aangepaste bodembedekkingskaart met 25 klassen (zie Tabel 3, kolom 1).
--   De aangepaste bodembedekkingskaart is vervolgens samengevoegd met de niveaus 2 tot 4 van het Landgebruiksbestand Vlaanderen volgens de procedure beschreven in @poelmans2019landgebruik. Hierdoor wordt van de meeste ecosystemen een beperkte oppervlakte geherklasseerd naar stedelijk en bebouwd gebied. Er is afgeweken van de procedure van @poelmans2019landgebruik voor de cellen die als bodembedekking 'overig' (d.w.z. 'onbekend') hebben en die buiten de zone 'verstedelijkt landgebruik' (landgebruiksbestand, niveau 2) liggen. Die percelen zijn voor deze analyse meegeteld bij in de klasse 'stedelijk en bebouwd gebied'. Dit leidt tot een aangepaste landgebruikskaart met 34 landgebruiksklassen ([Zie Tabel 3, kolom 2](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-ecosysteemvoorraad-landgebruiksbestand-vlaanderen)).
+-   In het IJzer- en het Schelde-estuarium is het water in de zone onder getijdeninvloed geherklasseerd tot een extra klasse overgangswater, het overig water wordt beschouwd als zoetwater.
+-   De wateroppervlakte voor de kust is uitgebreid tot het volledige Belgische deel van de Noordzee en als marien geklasseerd.
+-   De bodembedekkingsklasse ruigte en struweel is opgesplitst in ruigte en struweel op basis van de rasterlaag BWK_natuur.
+-   Landbouwpercelen die in 2015 (of 2012) als grasland zijn aangegeven en waarvoor in een of meer van de vier voorgaande jaren een andere teelt is aangegeven, zijn geherklasseerd als akker. Grasland krijgt hierdoor de betekenis van blijvend (vijfjarig) cultuurgrasland. Stappen 1 tot 5 resulteren in een aangepaste bodembedekkingskaart met 25 klassen (zie Tabel 3, kolom 1).
+-   De aangepaste bodembedekkingskaart is vervolgens samengevoegd met de niveaus 2 tot 4 van het Landgebruiksbestand Vlaanderen volgens de procedure beschreven in @poelmans2019landgebruik. Hierdoor wordt van de meeste ecosystemen een beperkte oppervlakte geherklasseerd naar stedelijk en bebouwd gebied. Er is afgeweken van de procedure van @poelmans2019landgebruik voor de cellen die als bodembedekking overig (d.w.z. onbekend) hebben en die buiten de zone verstedelijkt landgebruik (landgebruiksbestand, niveau 2) liggen. Die percelen zijn voor deze analyse meegeteld bij in de klasse stedelijk en bebouwd gebied. Dit leidt tot een aangepaste landgebruikskaart met 34 landgebruiksklassen ([Zie Tabel 3, kolom 2](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-ecosysteemvoorraad-landgebruiksbestand-vlaanderen)).
 -   De aangepaste landgebruikskaart wordt herleid tot een ecosysteemkaart met 10 klassen (zie [Tabel 3, kolom 3](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-ecosysteemvoorraad-landgebruiksbestand-vlaanderen)). Die indeling is gebaseerd op een ecosysteemtypologie voorgesteld door de Europese Commissie [@maes2013mapping; @maes2018mapping] en de richtlijnen van de Copernicus Land Monitoring Service.
 
 ## Onderzoeksvragen
 
-In dit document worden verschillende methoden getest op de landgebruikskaarten te verbeteren. De accuraatheid van de kaarten wordt geëvalueerd en vergeleken. De volgende kaarten worden onder de loep genomen:
+In dit document worden verschillende methoden getest op de landgebruikskaarten te verbeteren. De accuraatheid van de kaarten wordt geevalueerd en vergeleken. De volgende kaarten worden onder de loep genomen:
 
 -   Basiskaart: De basiskaart is de [kaart van het natuurrapport 2016](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-ecosysteemvoorraad-landgebruiksbestand-vlaanderen). Deze kaart is gebaseerd op het landgebruiksbestand Vlaanderen 2016 [@poelmans2019landgebruik] maar onderging enkele wijzigingen voor het natuurrapport zoals hoger beschreven. De accuraatheid van deze kaart werd reeds onder de loep genomen door middel van een validatiedataset van 3815 punten in [deze studie](https://www.vlaanderen.be/inbo/backgroundindicatoren/landgebruiksverandering-validatie). Dezelde validatieset zal gebruikt worden om de nieuwe kaarten te evalueren.
 -   Basiskaart+bos: Voor deze kaart werd de basiskaart verbeterd door gebruik te maken van de Boswijzer (beschikbaar voor 2009, 2015, 2018). Praktich zou dit willen zeggen dat er een stap wordt toegevoeg in de bos-laag via de Digitale Boswijzer waarbij bossen voorrang krijgen op andere terrestrische klassen (bv. overig laag groen).
--   Basiskaart+gras: Door verkleuring van de vegetatie in droge jaren wordt laag groen vaak als 'overig' geïdentificeerd. Blijvend grasland in landbouwgebruik wordt geïdentificeerd op basis van vijf opeenvolgende landbouwaangiftes. De aangifte geeft echter geen uitsluitsel of het grasland al dan niet omgeploegd wordt. Beide landgebruikstypes zouden beter in kaart gebracht kunnen worden via de analyse van kortetermijn tijdreeksen van satellietbeelden, zoals dat gebeurt voor de controle van het scheuren van poldergraslanden.
--   Basiskaart+bak: De bodemafdekkingskaart (BAK) heeft een resolutie van 5x5m en kan gebruikt worden om de verharde oppervlakte te identificeren binnen de klasse 'overig' van de landgebruikskaart. Cellen 'overig' die overlappen met de BAK blijven 'overig' en de andere cellen worden 'laag groen'.\
+-   Basiskaart+gras: Door verkleuring van de vegetatie in droge jaren wordt laag groen vaak als overig geidentificeerd. Blijvend grasland in landbouwgebruik wordt geidentificeerd op basis van vijf opeenvolgende landbouwaangiftes. De aangifte geeft echter geen uitsluitsel of het grasland al dan niet omgeploegd wordt. Beide landgebruikstypes zouden beter in kaart gebracht kunnen worden via de analyse van kortetermijn tijdreeksen van satellietbeelden, zoals dat gebeurt voor de controle van het scheuren van poldergraslanden.
+-   Basiskaart+bak: De bodemafdekkingskaart (BAK) heeft een resolutie van 5x5m en kan gebruikt worden om de verharde oppervlakte te identificeren binnen de klasse overig van de landgebruikskaart. Cellen overig die overlappen met de BAK blijven overig en de andere cellen worden laag groen.
 -   Basiskaart+bos+gras+bak: Combinatie van de drie voorgaande kaarten.
 
 Het doel van deze studie is om de accuraatheid van ieder van de kaarten te evalueren en te vergelijken. Voor natural capital accounting is het belangrijk op vetrouwbare kaarten te hebben om een extent account op te stellen en veranderingen in de extent weer te kunnen geven.
 
 # Methodology
 
-For each of the maps, an accuracy matrix is first constructed. This $N*N$ matrix compares the number of observed and classified cells corresponding to $N$ land cover classes [@deblust2013]. A fictitious example of an accuracy matrix is shown in table \@ref(tab: accuraatheidsmatrixvb). According to the reference data, there are 5 forest cells, 2 water cells and 3 urban cells. While the map classified 4 cells as forest, 2 cells as water and 4 cells as urban. The *total accuracy* is equal to the percentage of cells for which the reference data and the classified data from the map agree. This means that is equals the sum of the diagonal element in the accuracy matrix, divided by the total number of cells (10); $=\frac{4+1+3}{10}=80\%$ [@olofsson2014good]. User's accuracy) is equal to $1-$ commission error.  It is a measure for the correctness of a map and is expressed as the probability that a land cover class on the map is correct (according to the reference data) [@olofsson2014good].:
+For each of the maps, an accuracy matrix is first constructed. This $N*N$ matrix compares the number of observed and classified cells corresponding to $N$ land cover classes [@deblust2013]. A fictitious example of an accuracy matrix is shown in table \@ref(tab: accuraatheidsmatrixvb). According to the reference data, there are 5 forest cells, 2 water cells and 3 urban cells. While the map classified 4 cells as forest, 2 cells as water and 4 cells as urban. The *total accuracy* is equal to the percentage of cells for which the reference data and the classified data from the map agree. This means that is equals the sum of the diagonal element in the accuracy matrix, divided by the total number of cells (10); $=\frac{4+1+3}{10}=80\%$ [@olofsson2014good]. Users accuracy) is equal to $1-$ commission error.  It is a measure for the correctness of a map and is expressed as the probability that a land cover class on the map is correct (according to the reference data) [@olofsson2014good].:
 
-- For forest, user's accuracy is $\frac{4}{4}=100\%$ and commission error is $\frac{0}{4}=0\%$.
-- For water, user's accuracy is $\frac{1}{2}=50\%$ and commission error is $\frac{1}{2}=50\%$.
-- For urban, user's accuracy is $\frac{3}{4}=75\%$ and commission error is $\frac{1}{4}=25\%$.
+- For forest, users accuracy is $\frac{4}{4}=100\%$ and commission error is $\frac{0}{4}=0\%$.
+- For water, users accuracy is $\frac{1}{2}=50\%$ and commission error is $\frac{1}{2}=50\%$.
+- For urban, users accuracy is $\frac{3}{4}=75\%$ and commission error is $\frac{1}{4}=25\%$.
 
-The producer's accuracy is equal to $1-$ omission error and it's a measure of the completeness of the map since it indicates the proportion of a certain class that is shown on the map [@olofsson2014good].:
+The producers accuracy is equal to $1-$ omission error and it is a measure of the completeness of the map since it indicates the proportion of a certain class that is shown on the map [@olofsson2014good].:
 
-- For forest, producer's accuracy is $\frac{4}{5}=80\%$ and omission error is $\frac{1}{5}=20\%$.
-- For water, producer's accuracy is $\frac{1}{2}=50\%$ and omission error is $\frac{1}{2}=50\%$.
-- For urban, producer's accuracy is $\frac{3}{3}=100\%$ and omission error is $\frac{0}{3}=0\%$.
+- For forest, producers accuracy is $\frac{4}{5}=80\%$ and omission error is $\frac{1}{5}=20\%$.
+- For water, producers accuracy is $\frac{1}{2}=50\%$ and omission error is $\frac{1}{2}=50\%$.
+- For urban, producers accuracy is $\frac{3}{3}=100\%$ and omission error is $\frac{0}{3}=0\%$.
 
 ```{r , include = TRUE}
 vb <- data.frame(rows = c("Forest", "Water","Urban","Total"),
