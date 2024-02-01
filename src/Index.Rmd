@@ -99,6 +99,7 @@ library(here)
 library(rprojroot)
 library(knitr)
 library(kableExtra)
+conflicted::conflicts_prefer(dplyr::filter)
 setwd(find_root_file("", 
                       criterion = has_file("NCA_validatingextend.Rproj")))
 source(find_root_file("src/NCA_functions.R", 
