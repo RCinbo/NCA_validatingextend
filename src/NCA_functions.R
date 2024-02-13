@@ -3,14 +3,14 @@ library(caret) # Confusion matrix maken
 
 
 cleanmapdata <- function(data = data, points_id, tbltrans, type, year){
-  map <- terra::extract(x = data,
+  maps <- terra::extract(x = data,
                  y = terra::vect(
                    st_as_sf(x = points_id[, c('POINT_X','POINT_Y')],
                             coords = c("POINT_X", "POINT_Y"),
                             crs = "EPSG:31370"))
   )  #extract de waardes van de referentiedata
-  names(map)[2] <- "landgebruik"
-  map <- map %>%
+  names(maps)[2] <- "landgebruik"
+  maps <- maps %>%
     mutate(x = points_id[, 'POINT_X'],
            y = points_id[, 'POINT_X'],
            code = as.factor(landgebruik),
@@ -23,7 +23,7 @@ cleanmapdata <- function(data = data, points_id, tbltrans, type, year){
            year = year) %>%
     left_join(tbltrans[,-1], by = c("code" = "lucode")) %>% droplevels()
   rm(data)
-  return(map)
+  return(maps)
 }
 
 Cleanchangeareadata <- function(file, tbltrans, type){
