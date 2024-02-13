@@ -177,10 +177,12 @@ data <- ls %>% map(function(x)
   cleanmapdata(data = x,
                points_id = points_id, 
                tbltrans = tbltrans, 
-               type = ifelse(str_detect(names(x),"ori"),"nara",
-                             ifelse(str_detect(names(x),"bos"), "bosw",
-                                    ifelse(str_detect(names(x),"BAK"),"bak",
-                                           ifelse(str_detect(names(x),"gras"),"gras","all")))), 
+               type =
+                 ifelse(str_detect(names(x),"ori"), "nara",
+                        ifelse(str_detect(names(x),"bos"), "bosw",
+                               ifelse(str_detect(names(x),"BAK"), "bak",
+                                      ifelse(str_detect(names(x), "gras"),
+                                             "gras", "all")))), 
                year = as.numeric(gsub("[^0-9.-]", "", names(x)))
                )
   )
@@ -193,18 +195,21 @@ ls <- list(nara = "data/2013_2016/LG2013_LG2016_finaal_ori.csv",
 area <- ls %>% map(function(x) 
   Cleanchangeareadata(file = x,
                       tbltrans = tbltrans,
-                      type = ifelse(str_detect(x,"ori"),"nara",
-                             ifelse(str_detect(x,"bos"), "bosw",
-                                    ifelse(str_detect(x,"BAK"),"bak",
-                                           ifelse(str_detect(x,"gras"),"gras","all"))))
+                      type =
+                        ifelse(str_detect(x,"ori"), "nara",
+                               ifelse(str_detect(x,"bos"), "bosw",
+                                      ifelse(str_detect(x,"BAK"), "bak",
+                                             ifelse(str_detect(x,"gras"),
+                                                    "gras", "all"))))
                       )
   )
 rm(ls)
-ttl <- list(nara = "the original land use map",
-           bosw = "the original land use maps, updated with the forest marker file",
-           bak = "the original land use maps, updated with BAK",
-           gras = "the original land use maps, updated with permanent grassland data",
-           all = "the original land use maps, updated with the forest marker file, BAK, and permanent grassland data")
+ttl <-
+  list(nara = "the original land use map",
+       bosw = "the original land use maps, updated with the forest marker file",
+       bak = "the original land use maps, updated with BAK",
+       gras = "the original land use maps, updated with permanent grassland data",#nolint
+       all = "the original land use maps, updated with the forest marker file, BAK, and permanent grassland data")#nolint
 
 ```
 

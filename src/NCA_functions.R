@@ -15,9 +15,10 @@ cleanmapdata <- function(data = data, points_id, tbltrans, type, year){
            y = points_id[, 'POINT_X'],
            code = as.factor(landgebruik),
            landgebruik = recode_factor(code, "1" = "Open natuur", "2" = "Bos",
-                                       "3" = "Grasland", "4" = "Akker",  "5" =
-                                         "Urbaan", "6" = "Laag groen", "7" =
-                                         "Hoog groen", "8" = "Water", "9" = "Overig"),
+                                       "3" = "Grasland", "4" = "Akker",
+                                       "5" = "Urbaan", "6" = "Laag groen",
+                                       "7" = "Hoog groen", "8" = "Water",
+                                       "9" = "Overig"),
            type = type,
            year = year) %>%
     left_join(tbltrans[,-1], by = c("code" = "lucode")) %>% droplevels()
@@ -26,8 +27,9 @@ cleanmapdata <- function(data = data, points_id, tbltrans, type, year){
 }
 
 Cleanchangeareadata <- function(file, tbltrans, type){
-  maparea <- read_csv2(file = find_root_file(file,
-                                             criterion = has_file("NCA_validatingextend.Rproj")))
+  maparea <- read_csv2(
+    file = find_root_file(file,
+                          criterion = has_file("NCA_validatingextend.Rproj")))
   maparea %>% mutate(LG2013 = as.factor(LG2013),
                      LG2016 = as.factor(LG2016),
                      type = type)  %>%
@@ -316,9 +318,11 @@ validationData <- function(){
     # Aanpassen beoordeling "verandering" -> als de validatieklasse 2 x hetzelfde
     # is per evaluator, dan "nochange"
     rowwise() %>%
-    mutate(veranderingval = ifelse(luval13 == luval16, "nochange", "change")) %>%
-    mutate(luval_c = ifelse(klasse == "lu2013" & luval13 == oordeelval, 1,
-                            ifelse(klasse == "lu2016" & luval16 == oordeelval, 1, 0)
+    mutate(veranderingval =
+             ifelse(luval13 == luval16, "nochange", "change")) %>%
+    mutate(luval_c =
+             ifelse(klasse == "lu2013" & luval13 == oordeelval, 1,
+                    ifelse(klasse == "lu2016" & luval16 == oordeelval, 1, 0)
     )) %>%
     # Check of de gevalideerde landgebruiken overeenkomen met de LG van de kaart
     mutate(changeval_c = ifelse(veranderingval == oordeelval, 1, 0)) %>%

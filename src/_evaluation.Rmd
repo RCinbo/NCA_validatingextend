@@ -1,7 +1,7 @@
 
 ```{r {{id}}-setup}
 if (interactive()) {
-  this_map <- sample(c("nara", "bosw", "bak","gras","all"), 1)
+  this_map <- sample(c("nara", "bosw", "bak", "gras", "all"), 1)
 } else {
   this_map <- "{{id}}"
 }
@@ -40,7 +40,6 @@ t(res1$byClass) %>%
 
 ```{r {{id}}-time2accuracy, include=FALSE}
 res2 <- CalculateAccuracy(mapdata2, refdata2)
-
 ```
 
 The overall accuracy is `r round(100*unname(res2$overall['Accuracy']), digits = 2)`%. Table \@ref(tab:{{id}}-accuracybylu2) shows several accuracy measures for each of the land uses separately. 
@@ -57,8 +56,9 @@ Figure \@ref(fig:{{id}}-userproducer) shows the user and producer accuracy for e
 ```{r {{id}}-userproducer, include=TRUE, fig.cap=str_c("UA and PA for each of the land uses and for each of the years for ",title,". ")}
 data.frame(users = c(res1$byClass[,5], res2$byClass[,5]),
                 producers = c(res1$byClass[,6], res2$byClass[,6]),
-                lu = rep(str_remove(rownames(res1$byClass), "Class: "),2),
-                year = c(rep(2013, nrow(res1$byClass)), rep(2016, nrow(res2$byClass)))) %>%
+                lu = rep(str_remove(rownames(res1$byClass), "Class: "), 2),
+                year = c(rep(2013, nrow(res1$byClass)),
+                         rep(2016, nrow(res2$byClass)))) %>%
   mutate(lu = as.factor(lu),
          year = as.factor(year)) %>%
   ggplot() +
@@ -74,13 +74,14 @@ data.frame(users = c(res1$byClass[,5], res2$byClass[,5]),
 Apart from the accuracy of the map itself, it is also important to know the accuracy of the changes over time. As there are `r nlevels(mapdata1)` land use categories (`r str_c(levels(mapdata1), collapse = ", ")`),  there are  `r nlevels(mapdata1)*nlevels(mapdata1)` possible changes that may happen over time. Table \@ref(tab:{{id}}-observedchanges) shows the number of times each of the types of changes is observed on the map and in the reference dataset. Overall, the map showed land use changes in `r sum(mapdata1 != mapdata2)` cells (`r round(sum(mapdata1 != mapdata2)/length(mapdata1)*100, digits = 2)`%) while the reference dataset showed a change in land use in `r sum(refdata1 != refdata2)` out of the `r length(refdata1)` cells (`r round(sum(refdata1 != refdata2)/length(refdata1)*100, digits = 2)`%).
 
 ```{r {{id}}-observedchanges, include=TRUE}
-observed_changes <- data.frame(map = as.factor(str_c(mapdata1, mapdata2, sep = "-")),
-                               ref = as.factor(str_c(refdata1, refdata2, sep = "-")),
-                               mapchange = as.factor(ifelse(mapdata1 == mapdata2, 
-                                                  "No change", "Change")),
-                               refchange = as.factor(ifelse(refdata1 == refdata2, 
-                                                  "No change", "Change"))) %>%
-  mutate(map = factor(map, levels = sort(unique(c(levels(map),levels(ref))))),
+observed_changes <- data.frame(
+  map = as.factor(str_c(mapdata1, mapdata2, sep = "-")),
+  ref = as.factor(str_c(refdata1, refdata2, sep = "-")),
+  mapchange = as.factor(ifelse(mapdata1 == mapdata2,
+                               "No change", "Change")),
+  refchange = as.factor(ifelse(refdata1 == refdata2,
+                               "No change", "Change"))) %>%
+  mutate(map = factor(map, levels = sort(unique(c(levels(map), levels(ref))))),
          map = factor(map, levels = levels(map))) 
 observed_changes %>%
   pivot_longer(cols = 1:2, names_to = "type", values_to = "change") %>%
@@ -88,7 +89,8 @@ observed_changes %>%
   summarize(map = sum(type == "map"),
             ref = sum(type == "ref")) %>%
   ungroup() %>%
-  kable(caption = str_c("Observed land used changes on the map and in the reference data between 2013 and 2016 for ", title, ". "),
+  kable(caption = str_c("Observed land used changes on the map and in the reference data between 2013 and 2016 for ",#nolint
+                        title, ". "),
               col.names = c("Type of change", "Map","Reference"),
         booktabs = TRUE) 
 ```
@@ -105,29 +107,38 @@ If we look at the land use change as a 0/1 variable (change or no change) in ste
 ```{r {{id}}-accuracybyluchange, include=TRUE}
 A <- reschange1$byClass[,c(1,2,5,6)] 
 rownames(A) <- str_remove(rownames(A), "Class: ")
-A %>% kable(caption = str_c("Accuracy of land use changes  for ", title, " (only some accuracy measures are shown but others can be requested)."),
-        row.names = TRUE,
-        booktabs = TRUE) 
+A %>% kable(
+  caption = str_c("Accuracy of land use changes  for ",
+                  title,
+                  " (only some accuracy measures are shown but others can be requested)."),#nolint
+  row.names = TRUE,
+  booktabs = TRUE) 
 ```
 
 ```{r {{id}}-accuracychange, include=TRUE}
-reschange2$table %>% kable(caption = str_c("Confusion matrix for land use changes, only comparing change / no change for ", title, ". "),
+reschange2$table %>%
+  kable(caption = str_c("Confusion matrix for land use changes, only comparing change / no change for ",#nolint
+                        title, ". "),
         row.names = TRUE,
         booktabs = TRUE) 
 ```
 
 ```{r {{id}}-accuracychange2, include=TRUE}
 reschange2$byClass %>% 
-  kable(caption = 
-          str_c("Accuracy of land use changes, only comparing change / no change for ",
-                title, ". "),
-        booktabs = TRUE) 
+  kable(
+    caption =
+      str_c("Accuracy of land use changes, only comparing change / no change for ",#nolint
+            title, ". "),
+    booktabs = TRUE)
 ```
 
 #### Confidence intervals on the area that changed
 
 ```{r {{id}}-uncertaintyarea, include=TRUE}
-ov <- Validationuncertainty(ma = as.data.frame.matrix(reschange1$table), maparea = maparea$area, pixelsize = 0.01)#each cell is 100 square meters = 0.01ha
+ov <- Validationuncertainty(
+  ma = as.data.frame.matrix(reschange1$table),
+  maparea = maparea$area,
+  pixelsize = 0.01)#each cell is 100 square meters = 0.01ha
 ```
 ```{r {{id}}-uncertaintyareabar, include=TRUE, fig.cap = str_c("Estimated changed area (bars) with confidence intervals versus changed area according to the map (dots) for ", title, ". Asterisks identify area changes that were significantly different from zero.")}
 PlotValidationData(ov)
